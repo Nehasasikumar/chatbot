@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Beige/cream background with blackish brown accents */
+    --background: 39 77% 92%; /* Warm cream background */
+    --foreground: 25 25% 15%; /* Dark brown text */
+
+    --card: 39 77% 95%; /* Slightly lighter cream for cards */
+    --card-foreground: 25 25% 15%;
+
+    --popover: 39 77% 95%;
+    --popover-foreground: 25 25% 15%;
+
+    --primary: 25 25% 15%; /* Blackish brown for buttons/highlights */
+    --primary-foreground: 39 77% 95%; /* Cream text on dark buttons */
+
+    --secondary: 39 50% 85%; /* Muted beige for secondary elements */
+    --secondary-foreground: 25 25% 15%;
+
+    --muted: 39 50% 88%; /* Light beige for muted backgrounds */
+    --muted-foreground: 25 15% 45%; /* Muted brown text */
+
+    --accent: 30 40% 80%; /* Soft accent color */
+    --accent-foreground: 25 25% 15%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* Keep same warm theme for dark mode but darker */
+    --background: 25 30% 8%; /* Dark brown background */
+    --foreground: 39 50% 90%; /* Light cream text */
+
+    --card: 25 30% 10%; /* Slightly lighter dark brown for cards */
+    --card-foreground: 39 50% 90%;
+
+    --popover: 25 30% 10%;
+    --popover-foreground: 39 50% 90%;
+
+    --primary: 39 77% 85%; /* Light cream for primary in dark mode */
+    --primary-foreground: 25 30% 8%; /* Dark background for contrast */
+
+    --secondary: 25 20% 15%; /* Dark secondary */
+    --secondary-foreground: 39 50% 90%;
+
+    --muted: 25 20% 12%; /* Dark muted background */
+    --muted-foreground: 39 30% 65%; /* Muted cream text */
+
+    --accent: 30 40% 20%; /* Dark accent */
+    --accent-foreground: 39 50% 90%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
