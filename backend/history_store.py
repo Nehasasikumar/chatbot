@@ -2,11 +2,11 @@ import json
 import os
 from datetime import datetime
 
-HISTORY_FILE = "../history/chat_history.json"
+HISTORY_FILE = "./history/chat_history.json"
 
-def save_history(url, summary):
-    if not os.path.exists("../history"):
-        os.makedirs("../history")
+def save_history(url, title, summary):
+    if not os.path.exists("./history"):
+        os.makedirs("./history")
 
     history = []
     if os.path.exists(HISTORY_FILE):
@@ -14,8 +14,10 @@ def save_history(url, summary):
             history = json.load(f)
 
     history.append({
+        "id": url,
         "timestamp": datetime.now().isoformat(),
         "url": url,
+        "title": title,
         "summary": summary
     })
 

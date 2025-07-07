@@ -1,5 +1,0 @@
-flask
-transformers
-torch
-newspaper3k
-flask_cors

@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { mockApi } from '@/services/mockApi';
+import { summarizeArticle } from '../utils/summarize'; // ✅ Adjusted import path
 
 interface Message {
   id: string;
@@ -50,21 +50,21 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!inputUrl.trim()) {
       toast({
-        variant: "destructive",
-        title: "URL required",
-        description: "Please enter a valid article URL.",
+        variant: 'destructive',
+        title: 'URL required',
+        description: 'Please enter a valid article URL.',
       });
       return;
     }
 
     if (!isValidUrl(inputUrl)) {
       toast({
-        variant: "destructive",
-        title: "Invalid URL",
-        description: "Please enter a valid URL starting with http:// or https://",
+        variant: 'destructive',
+        title: 'Invalid URL',
+        description: 'Please enter a valid URL starting with http:// or https://',
       });
       return;
     }
@@ -82,40 +82,43 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
     setIsLoading(true);
 
     try {
-      const response = await mockApi.summarize(inputUrl);
+      const response = await summarizeArticle(inputUrl);
+
+      const summaryText =
+        response.abstractive_summary ||
+        response.extractive_summary ||
+        'No summary available from the server.';
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: response.data.summary,
+        content: summaryText,
         timestamp: new Date(),
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-      
-      // If this was a new summary, call the callback with the summary data
-      if (response.data.summary_id) {
+
+      if (response.summary_id) {
         onSummaryCreated({
-          id: response.data.summary_id,
-          title: response.data.title || 'Article Summary',
+          id: response.summary_id,
+          title: response.title || 'Article Summary',
           url: inputUrl,
           created_at: new Date().toISOString(),
         });
       }
 
       toast({
-        title: "Summary generated!",
-        description: "Article has been successfully summarized.",
+        title: 'Summary generated!',
+        description: 'Article has been successfully summarized.',
       });
-
     } catch (error: any) {
       toast({
-        variant: "destructive",
-        title: "Summary failed",
-        description: error.response?.data?.message || "Failed to generate summary. Please try again.",
+        variant: 'destructive',
+        title: 'Summary failed',
+        description:
+          error?.response?.data?.error || 'Failed to generate summary. Please try again.',
       });
-      
-      // Remove the user message if the request failed
+
       setMessages(prev => prev.filter(msg => msg.id !== userMessage.id));
     } finally {
       setIsLoading(false);
@@ -124,7 +127,6 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
 
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Messages Area */}
       <ScrollArea className="flex-1 p-6" ref={scrollAreaRef}>
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
@@ -139,10 +141,12 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
           </div>
         ) : (
           <div className="space-y-6 max-w-4xl mx-auto">
-            {messages.map((message) => (
+            {messages.map(message => (
               <div
                 key={message.id}
-                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${
+                  message.type === 'user' ? 'justify-end' : 'justify-start'
+                }`}
               >
                 <div
                   className={`max-w-[80%] rounded-2xl px-4 py-3 ${
@@ -154,9 +158,9 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
                   {message.type === 'user' ? (
                     <div>
                       <p className="text-sm font-medium mb-1">Article URL:</p>
-                      <a 
-                        href={message.url} 
-                        target="_blank" 
+                      <a
+                        href={message.url}
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary-foreground/90 hover:text-primary-foreground underline break-all"
                       >
@@ -168,23 +172,33 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
                       {message.content}
                     </div>
                   )}
-                  <div className={`text-xs mt-2 ${
-                    message.type === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                  }`}>
+                  <div
+                    className={`text-xs mt-2 ${
+                      message.type === 'user'
+                        ? 'text-primary-foreground/70'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
                     {message.timestamp.toLocaleTimeString()}
                   </div>
                 </div>
               </div>
             ))}
-            
+
             {isLoading && (
               <div className="flex justify-start">
                 <div className="bg-card border border-accent/20 rounded-2xl px-4 py-3 mr-12">
                   <div className="flex items-center space-x-2">
                     <div className="flex space-x-1">
                       <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      <div
+                        className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
+                        style={{ animationDelay: '0.1s' }}
+                      ></div>
+                      <div
+                        className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
+                        style={{ animationDelay: '0.2s' }}
+                      ></div>
                     </div>
                     <span className="text-muted-foreground text-sm">Generating summary...</span>
                   </div>
@@ -195,7 +209,6 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
         )}
       </ScrollArea>
 
-      {/* Input Area */}
       <div className="border-t border-accent/20 p-6">
         <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
           <div className="relative">
@@ -204,11 +217,11 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
               type="url"
               placeholder="Paste article URL here..."
               value={inputUrl}
-              onChange={(e) => setInputUrl(e.target.value)}
+              onChange={e => setInputUrl(e.target.value)}
               disabled={isLoading}
               className="pr-14 h-14 text-lg bg-card border-accent/20 focus:border-primary"
             />
-            <Button 
+            <Button
               type="submit"
               size="sm"
               disabled={isLoading || !inputUrl.trim()}

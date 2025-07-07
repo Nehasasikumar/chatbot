@@ -1,0 +1,8 @@
+flask
+flask_cors
+newspaper3k
+transformers
+torch
+bert-extractive-summarizer
+sentencepiece
+lxml_html_clean
