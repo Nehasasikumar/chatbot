@@ -47,15 +47,12 @@ function App() {
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
+                <Summarizer />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-          <div>
-            <h1>Article Summarizer</h1>
-            <Summarizer />
-          </div>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

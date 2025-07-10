@@ -9,8 +9,10 @@ import { useToast } from '@/hooks/use-toast';
 interface Summary {
   id: string;
   title: string;
-  created_at: string;
+  created_at?: string;
+  timestamp?: string;
   url: string;
+  summary: string;
 }
 
 export const Dashboard = () => {
@@ -27,7 +29,6 @@ export const Dashboard = () => {
       return;
     }
 
-    // Close sidebar on mobile by default
     if (isMobile) {
       setSidebarOpen(false);
     }
@@ -50,8 +51,8 @@ export const Dashboard = () => {
   const handleSummaryCreated = (summary: Summary) => {
     setCurrentSummary(summary);
     toast({
-      title: "Summary saved!",
-      description: "Your summary has been saved to your history.",
+      title: 'Summary saved!',
+      description: 'Your summary has been saved to your history.',
     });
   };
 
@@ -65,20 +66,24 @@ export const Dashboard = () => {
     <div className="h-screen bg-background flex">
       {/* Mobile overlay */}
       {isMobile && sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <div className={`${
-        isMobile 
-          ? `fixed left-0 top-0 z-50 h-full transition-transform duration-300 ${
-              sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-            }`
-          : sidebarOpen ? 'block' : 'hidden'
-      }`}>
+      <div
+        className={`${
+          isMobile
+            ? `fixed left-0 top-0 z-50 h-full transition-transform duration-300 ${
+                sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+              }`
+            : sidebarOpen
+            ? 'block'
+            : 'hidden'
+        }`}
+      >
         <Sidebar
           onNewSummary={handleNewSummary}
           onSelectSummary={handleSelectSummary}
@@ -105,7 +110,7 @@ export const Dashboard = () => {
               {currentSummary ? currentSummary.title : 'Article Summarizer'}
             </h1>
           </div>
-          
+
           <div className="flex items-center space-x-3">
             {!isMobile && sidebarOpen && (
               <Button
@@ -117,22 +122,29 @@ export const Dashboard = () => {
                 Hide Sidebar
               </Button>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-            >
+            <Button variant="outline" size="sm" onClick={handleLogout}>
               Logout
             </Button>
           </div>
         </header>
 
-        {/* Chat Interface */}
-        <div className="flex-1 min-h-0">
-          <ChatInterface 
-            summaryId={currentSummary?.id}
-            onSummaryCreated={handleSummaryCreated}
-          />
+        {/* Main View */}
+        <div className="flex-1 min-h-0 p-6 overflow-auto">
+          {currentSummary ? (
+            <>
+              <h2 className="text-lg font-semibold text-foreground mb-4">
+                {currentSummary.title}
+              </h2>
+              <div className="whitespace-pre-wrap text-muted-foreground">
+                {currentSummary.summary || 'No summary content available.'}
+              </div>
+            </>
+          ) : (
+            <ChatInterface
+              summaryId={currentSummary?.id}
+              onSummaryCreated={handleSummaryCreated}
+            />
+          )}
         </div>
       </div>
     </div>

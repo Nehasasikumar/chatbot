@@ -5,47 +5,38 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AuthLayout } from '@/components/AuthLayout';
 import { useToast } from '@/hooks/use-toast';
-import { mockApi } from '@/services/mockApi';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
     try {
-      const response = await mockApi.login(email, password);
-
-      if (response.data.success) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        toast({
-          title: "Welcome back!",
-          description: "You've been logged in successfully.",
-        });
-        navigate('/dashboard');
-      }
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Login failed",
-        description: error.response?.data?.message || "Invalid credentials. Please try again.",
+      const res = await fetch('http://localhost:5000/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
-    } finally {
-      setIsLoading(false);
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        toast({ title: 'Login successful' });
+        navigate('/dashboard');
+      } else {
+        toast({ variant: 'destructive', title: 'Login failed', description: data.error });
+      }
+    } catch {
+      toast({ variant: 'destructive', title: 'Error', description: 'Something went wrong' });
     }
   };
 
   return (
-    <AuthLayout 
-      title="Welcome Back" 
-      subtitle="Sign in to your account to continue"
-    >
+    <AuthLayout title="Welcome Back" subtitle="Sign in to your account to continue">
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -60,34 +51,40 @@ export const Login = () => {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 relative">
           <Label htmlFor="password">Password</Label>
           <Input
             id="password"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             placeholder="Enter your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="h-12"
+            className="h-12 pr-10"
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-9 text-sm text-gray-500"
+          >
+            {showPassword ? 'Hide' : 'Show'}
+          </button>
         </div>
 
-        <Button 
-          type="submit" 
-          className="w-full h-12 text-lg font-medium"
-          disabled={isLoading}
-        >
-          {isLoading ? "Signing in..." : "Sign In"}
+        <div className="text-right">
+          <Link to="/forgot-password" className="text-primary hover:underline text-sm font-medium">
+            Forgot Password?
+          </Link>
+        </div>
+
+        <Button type="submit" className="w-full h-12 text-lg font-medium">
+          Sign In
         </Button>
 
         <div className="text-center pt-4">
           <p className="text-muted-foreground">
             Don't have an account?{' '}
-            <Link 
-              to="/signup" 
-              className="text-primary hover:underline font-medium"
-            >
+            <Link to="/signup" className="text-primary hover:underline font-medium">
               Sign up
             </Link>
           </p>

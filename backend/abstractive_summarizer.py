@@ -7,7 +7,7 @@ def generate_summary(text):
 
     summary = ""
     for i, chunk in enumerate(chunks):
-        print(f"🧠 Abstractive chunk {i+1}/{len(chunks)}")
+        print(f"Abstractive chunk {i+1}/{len(chunks)}")
         result = summarizer(chunk, max_length=150, min_length=40, do_sample=False)
         summary += result[0]['summary_text'] + " "
     return summary.strip()

@@ -1,16 +1,23 @@
+# backend/history_store.py
 import json
 import os
 from datetime import datetime
 
-HISTORY_FILE = "./history/chat_history.json"
+HISTORY_DIR = "./history"
 
-def save_history(url, title, summary):
-    if not os.path.exists("./history"):
-        os.makedirs("./history")
+def get_user_history_file(user_email):
+    safe_email = user_email.replace("@", "_at_").replace(".", "_dot_")
+    return os.path.join(HISTORY_DIR, f"{safe_email}_history.json")
+
+def save_history(user_email, url, title, summary):
+    if not os.path.exists(HISTORY_DIR):
+        os.makedirs(HISTORY_DIR)
+
+    user_history_file = get_user_history_file(user_email)
 
     history = []
-    if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, "r") as f:
+    if os.path.exists(user_history_file):
+        with open(user_history_file, "r") as f:
             history = json.load(f)
 
     history.append({
@@ -21,11 +28,12 @@ def save_history(url, title, summary):
         "summary": summary
     })
 
-    with open(HISTORY_FILE, "w") as f:
+    with open(user_history_file, "w") as f:
         json.dump(history, f, indent=4)
 
-def get_history():
-    if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, "r") as f:
+def get_history(user_email):
+    user_history_file = get_user_history_file(user_email)
+    if os.path.exists(user_history_file):
+        with open(user_history_file, "r") as f:
             return json.load(f)
     return []

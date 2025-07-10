@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { summarizeArticle } from '../utils/summarize'; // ✅ Adjusted import path
+import { summarizeArticle } from '../config/api';
 
 interface Message {
   id: string;
@@ -36,6 +36,28 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
   useEffect(() => {
     if (!summaryId) {
       setMessages([]);
+      return;
+    }
+
+    const stored = localStorage.getItem(summaryId);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      const loadedMessages: Message[] = [
+        {
+          id: 'user-' + summaryId,
+          type: 'user',
+          content: parsed.url,
+          timestamp: new Date(parsed.created_at),
+          url: parsed.url,
+        },
+        {
+          id: 'assistant-' + summaryId,
+          type: 'assistant',
+          content: parsed.summary,
+          timestamp: new Date(parsed.created_at),
+        },
+      ];
+      setMessages(loadedMessages);
     }
   }, [summaryId]);
 
@@ -77,7 +99,7 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
       url: inputUrl,
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages([userMessage]);
     setInputUrl('');
     setIsLoading(true);
 
@@ -85,9 +107,7 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
       const response = await summarizeArticle(inputUrl);
 
       const summaryText =
-        response.abstractive_summary ||
-        response.extractive_summary ||
-        'No summary available from the server.';
+  response.summary || response.abstractive_summary || response.extractive_summary || 'No summary available.';
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -96,16 +116,20 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
         timestamp: new Date(),
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages([userMessage, assistantMessage]);
 
-      if (response.summary_id) {
-        onSummaryCreated({
-          id: response.summary_id,
-          title: response.title || 'Article Summary',
-          url: inputUrl,
-          created_at: new Date().toISOString(),
-        });
-      }
+      const storageKey = inputUrl;
+
+      const summaryData = {
+        id: storageKey,
+        title: response.title || 'Article Summary',
+        url: inputUrl,
+        summary: summaryText,
+        created_at: new Date().toISOString(),
+      };
+
+      localStorage.setItem(storageKey, JSON.stringify(summaryData));
+      onSummaryCreated(summaryData);
 
       toast({
         title: 'Summary generated!',
@@ -115,11 +139,10 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
       toast({
         variant: 'destructive',
         title: 'Summary failed',
-        description:
-          error?.response?.data?.error || 'Failed to generate summary. Please try again.',
+        description: error.message || 'Failed to generate summary. Please try again.',
       });
 
-      setMessages(prev => prev.filter(msg => msg.id !== userMessage.id));
+      setMessages([]);
     } finally {
       setIsLoading(false);
     }
@@ -127,13 +150,12 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
 
   return (
     <div className="flex flex-col h-full bg-background">
+      {/* Chat display */}
       <ScrollArea className="flex-1 p-6" ref={scrollAreaRef}>
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center max-w-md">
-              <h2 className="text-2xl font-semibold text-foreground mb-4">
-                Start a New Summary
-              </h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">Start a New Summary</h2>
               <p className="text-muted-foreground">
                 Paste an article URL below and I'll generate a comprehensive summary for you.
               </p>
@@ -141,12 +163,10 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
           </div>
         ) : (
           <div className="space-y-6 max-w-4xl mx-auto">
-            {messages.map(message => (
+            {messages.map((message) => (
               <div
                 key={message.id}
-                className={`flex ${
-                  message.type === 'user' ? 'justify-end' : 'justify-start'
-                }`}
+                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
                   className={`max-w-[80%] rounded-2xl px-4 py-3 ${
@@ -191,14 +211,8 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
                   <div className="flex items-center space-x-2">
                     <div className="flex space-x-1">
                       <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
-                      <div
-                        className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
-                        style={{ animationDelay: '0.1s' }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
-                        style={{ animationDelay: '0.2s' }}
-                      ></div>
+                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                     </div>
                     <span className="text-muted-foreground text-sm">Generating summary...</span>
                   </div>
@@ -209,25 +223,26 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
         )}
       </ScrollArea>
 
+      {/* Input area with full width */}
       <div className="border-t border-accent/20 p-6">
-        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
-          <div className="relative">
+        <form onSubmit={handleSubmit} className="w-full px-4">
+          <div className="flex gap-2">
             <Input
               ref={inputRef}
               type="url"
               placeholder="Paste article URL here..."
               value={inputUrl}
-              onChange={e => setInputUrl(e.target.value)}
+              onChange={(e) => setInputUrl(e.target.value)}
               disabled={isLoading}
-              className="pr-14 h-14 text-lg bg-card border-accent/20 focus:border-primary"
+              className="h-14 text-lg bg-card border-accent/20 focus:border-primary flex-1"
             />
             <Button
               type="submit"
-              size="sm"
+              size="lg"
               disabled={isLoading || !inputUrl.trim()}
-              className="absolute right-2 top-2 h-10 w-10 p-0 bg-primary hover:bg-primary/90"
+              className="h-14 px-4 bg-primary hover:bg-primary/90"
             >
-              <ArrowUp className="w-5 h-5" />
+              <ArrowUp className="w-6 h-6" />
             </Button>
           </div>
         </form>
