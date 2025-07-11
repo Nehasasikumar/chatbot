@@ -8,9 +8,11 @@ from newspaper import Article
 from transformers import pipeline
 import spacy
 import traceback
+import re
+from urllib.parse import unquote
 
 # Load spaCy and BART models
-nlp = spacy.load("en_core_web_sm") #pos tagging,sentence breaking
+nlp = spacy.load("en_core_web_sm")
 summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
 
 # JWT Secret
@@ -26,18 +28,17 @@ db = client['chatbot_db']
 users = db['users']
 history_collection = db['history']
 
-# ----------------- SIGNUP -----------------
-import re  # <-- add this import at the top
-
+# ----------------- PASSWORD VALIDATION -----------------
 def is_strong_password(password):
     return (
         len(password) >= 8 and
-        re.search(r"[A-Z]", password) and   # at least one uppercase
-        re.search(r"[a-z]", password) and   # at least one lowercase
-        re.search(r"[0-9]", password) and   # at least one number
-        re.search(r"[!@#$%^&*(),.?\":{}|<>]", password)  # at least one special char
+        re.search(r"[A-Z]", password) and
+        re.search(r"[a-z]", password) and
+        re.search(r"[0-9]", password) and
+        re.search(r"[!@#$%^&*(),.?\":{}|<>]", password)
     )
 
+# ----------------- SIGNUP -----------------
 @app.route('/signup', methods=['POST'])
 def signup():
     data = request.get_json()
@@ -45,17 +46,14 @@ def signup():
     email = data.get('email')
     password = data.get('password')
 
-    # Email already exists check
     if users.find_one({'email': email}):
         return jsonify({'error': 'Email already exists'}), 400
 
-    # Password strength check
     if not is_strong_password(password):
         return jsonify({
             'error': 'Password must be at least 8 characters long, include uppercase, lowercase, number, and special character.'
         }), 400
 
-    # Password is strong → hash & save
     hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     users.insert_one({'name': name, 'email': email, 'password': hashed})
 
@@ -105,9 +103,8 @@ def extractive_summary_spacy(text, sentence_count=7):
     doc = nlp(text)
     sentences = list(doc.sents)
 
-    # Rank sentences by number of named entities and nouns
     ranked = sorted(sentences, key=lambda s: sum(1 for token in s if token.pos_ in ['NOUN', 'PROPN']), reverse=True)
-    top_sentences = sorted(ranked[:sentence_count], key=lambda s: s.start)  # keep original order
+    top_sentences = sorted(ranked[:sentence_count], key=lambda s: s.start)
     return " ".join(str(s).strip() for s in top_sentences)
 
 # ----------------- SUMMARIZE -----------------
@@ -124,7 +121,6 @@ def summarize():
         return jsonify({'error': 'URL is required'}), 400
 
     try:
-        print(f"Downloading article: {url}")
         article = Article(url)
         article.download()
         article.parse()
@@ -134,19 +130,14 @@ def summarize():
         if not article_text.strip():
             raise ValueError("Article content is empty")
 
-        print("Extracting key sentences using spaCy...")
         extracted_text = extractive_summary_spacy(article_text, sentence_count=7)
-
-        print("Performing abstractive summarization...")
         output = summarizer(extracted_text, max_length=200, min_length=60, do_sample=False)
         summary_text = output[0]['summary_text']
 
     except Exception as e:
-        print("Error during summarization:")
         traceback.print_exc()
         return jsonify({'error': f'Summarization failed: {str(e)}'}), 500
 
-    print(f"Saving summary for {email}")
     history_collection.insert_one({
         "email": email,
         "url": url,
@@ -167,9 +158,48 @@ def history():
     if error:
         return jsonify({'error': error}), 401
 
-    print(f"Fetching history for: {email}")
     summaries = list(history_collection.find({"email": email}, {"_id": 0}))
     return jsonify({"summaries": summaries}), 200
+
+#from urllib.parse import unquote
+
+# ----------------- DELETE SUMMARY -----------------
+@app.route('/summary/<path:url>', methods=['DELETE'])
+def delete_summary(url):
+    email, error = get_email_from_token(request.headers.get('Authorization'))
+    if error:
+        return jsonify({'error': error}), 401
+
+    decoded_url = unquote(url)
+    print(f"Deleting summary for: {decoded_url} Email: {email}")
+    result = history_collection.delete_one({'email': email, 'url': decoded_url})
+
+    if result.deleted_count == 0:
+        return jsonify({'error': 'Summary not found'}), 404
+
+    return jsonify({'message': 'Summary deleted'}), 200
+
+# ----------------- RENAME SUMMARY -----------------
+@app.route('/summary/<path:url>', methods=['PUT'])
+def rename_summary(url):
+    email, error = get_email_from_token(request.headers.get('Authorization'))
+    if error:
+        return jsonify({'error': error}), 401
+
+    data = request.get_json()
+    new_title = data.get('title')
+    decoded_url = unquote(url)
+
+    print(f"Renaming summary for: {decoded_url} Email: {email} New title: {new_title}")
+    result = history_collection.update_one(
+        {'email': email, 'url': decoded_url},
+        {'$set': {'title': new_title}}
+    )
+
+    if result.matched_count == 0:
+        return jsonify({'error': 'Summary not found'}), 404
+
+    return jsonify({'message': 'Title updated'}), 200
 
 # ----------------- MAIN -----------------
 if __name__ == '__main__':

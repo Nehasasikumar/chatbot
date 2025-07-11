@@ -67,3 +67,27 @@ export const summarizeArticle = async (url: string) => {
     );
   }
 };
+
+// ----------------------
+// Delete a summary by URL
+// ----------------------
+export const deleteSummary = async (url: string) => {
+  try {
+    const response = await api.delete(`/summary/${encodeURIComponent(url)}`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.error || 'Failed to delete summary.');
+  }
+};
+
+// ----------------------
+// Rename a summary by URL
+// ----------------------
+export const renameSummary = async (url: string, title: string) => {
+  try {
+    const response = await api.put(`/summary/${encodeURIComponent(url)}`, { title });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.error || 'Failed to rename summary.');
+  }
+};
