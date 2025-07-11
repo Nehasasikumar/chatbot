@@ -11,11 +11,29 @@ export const Signup = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const validatePassword = (pwd: string) => {
+    const errors: string[] = [];
+    if (pwd.length < 8) errors.push('Password must be at least 8 characters');
+    if (!/[A-Z]/.test(pwd)) errors.push('Must include an uppercase letter');
+    if (!/[a-z]/.test(pwd)) errors.push('Must include a lowercase letter');
+    if (!/[0-9]/.test(pwd)) errors.push('Must include a number');
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) errors.push('Must include a special character');
+    return errors;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const errors = validatePassword(password);
+    setPasswordErrors(errors);
+
+    if (errors.length > 0) return;
 
     if (password !== confirmPassword) {
       toast({
@@ -32,16 +50,28 @@ export const Signup = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password }),
       });
+
       const data = await res.json();
 
       if (res.ok) {
-        toast({ title: 'Account created!', description: 'Your account has been created successfully. Please sign in.' });
+        toast({
+          title: 'Account created!',
+          description: 'Your account has been created successfully. Please sign in.',
+        });
         navigate('/login');
       } else {
-        toast({ variant: 'destructive', title: 'Signup failed', description: data.error || 'Try again.' });
+        toast({
+          variant: 'destructive',
+          title: 'Signup failed',
+          description: data.error || 'Try again.',
+        });
       }
     } catch {
-      toast({ variant: 'destructive', title: 'Error', description: 'Something went wrong. Please try again.' });
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Something went wrong. Please try again.',
+      });
     }
   };
 
@@ -76,28 +106,53 @@ export const Signup = () => {
 
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="Create a password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="h-12"
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Create a password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="h-12 pr-16"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-primary underline"
+            >
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          {passwordErrors.length > 0 && (
+            <ul className="text-sm text-red-500 mt-1 space-y-1 list-disc list-inside">
+              {passwordErrors.map((err, i) => (
+                <li key={i}>{err}</li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="confirmPassword">Confirm Password</Label>
-          <Input
-            id="confirmPassword"
-            type="password"
-            placeholder="Confirm your password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-            className="h-12"
-          />
+          <div className="relative">
+            <Input
+              id="confirmPassword"
+              type={showConfirmPassword ? 'text' : 'password'}
+              placeholder="Confirm your password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              className="h-12 pr-16"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-primary underline"
+            >
+              {showConfirmPassword ? 'Hide' : 'Show'}
+            </button>
+          </div>
         </div>
 
         <Button type="submit" className="w-full h-12 text-lg font-medium">

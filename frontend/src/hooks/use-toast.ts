@@ -5,9 +5,11 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
+// Toast config
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_REMOVE_DELAY = 1000000 // ms — change to 5000 for 5s auto-hide
 
+// Toast object type with custom props
 type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
@@ -15,6 +17,7 @@ type ToasterToast = ToastProps & {
   action?: ToastActionElement
 }
 
+// Define possible toast actions
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
   UPDATE_TOAST: "UPDATE_TOAST",
@@ -22,13 +25,14 @@ const actionTypes = {
   REMOVE_TOAST: "REMOVE_TOAST",
 } as const
 
+// ID generator
 let count = 0
-
 function genId() {
   count = (count + 1) % Number.MAX_SAFE_INTEGER
   return count.toString()
 }
 
+// Action types
 type ActionType = typeof actionTypes
 
 type Action =
@@ -53,6 +57,7 @@ interface State {
   toasts: ToasterToast[]
 }
 
+// Keep timeouts for auto-remove
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 
 const addToRemoveQueue = (toastId: string) => {
@@ -71,6 +76,7 @@ const addToRemoveQueue = (toastId: string) => {
   toastTimeouts.set(toastId, timeout)
 }
 
+// Main reducer function to handle toast state changes
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST":
@@ -90,8 +96,7 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
+      // Dismiss logic with timer
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
@@ -104,14 +109,12 @@ export const reducer = (state: State, action: Action): State => {
         ...state,
         toasts: state.toasts.map((t) =>
           t.id === toastId || toastId === undefined
-            ? {
-                ...t,
-                open: false,
-              }
+            ? { ...t, open: false }
             : t
         ),
       }
     }
+
     case "REMOVE_TOAST":
       if (action.toastId === undefined) {
         return {
@@ -126,8 +129,8 @@ export const reducer = (state: State, action: Action): State => {
   }
 }
 
+// Internal memory state
 const listeners: Array<(state: State) => void> = []
-
 let memoryState: State = { toasts: [] }
 
 function dispatch(action: Action) {
@@ -137,6 +140,7 @@ function dispatch(action: Action) {
   })
 }
 
+// Trigger a toast programmatically
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
@@ -147,7 +151,12 @@ function toast({ ...props }: Toast) {
       type: "UPDATE_TOAST",
       toast: { ...props, id },
     })
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+
+  const dismiss = () =>
+    dispatch({
+      type: "DISMISS_TOAST",
+      toastId: id,
+    })
 
   dispatch({
     type: "ADD_TOAST",
@@ -162,12 +171,13 @@ function toast({ ...props }: Toast) {
   })
 
   return {
-    id: id,
+    id,
     dismiss,
     update,
   }
 }
 
+// React Hook to use inside components
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 
@@ -184,7 +194,8 @@ function useToast() {
   return {
     ...state,
     toast,
-    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+    dismiss: (toastId?: string) =>
+      dispatch({ type: "DISMISS_TOAST", toastId }),
   }
 }
 

@@ -10,7 +10,7 @@ import spacy
 import traceback
 
 # Load spaCy and BART models
-nlp = spacy.load("en_core_web_sm")
+nlp = spacy.load("en_core_web_sm") #pos tagging,sentence breaking
 summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
 
 # JWT Secret
@@ -27,6 +27,17 @@ users = db['users']
 history_collection = db['history']
 
 # ----------------- SIGNUP -----------------
+import re  # <-- add this import at the top
+
+def is_strong_password(password):
+    return (
+        len(password) >= 8 and
+        re.search(r"[A-Z]", password) and   # at least one uppercase
+        re.search(r"[a-z]", password) and   # at least one lowercase
+        re.search(r"[0-9]", password) and   # at least one number
+        re.search(r"[!@#$%^&*(),.?\":{}|<>]", password)  # at least one special char
+    )
+
 @app.route('/signup', methods=['POST'])
 def signup():
     data = request.get_json()
@@ -34,9 +45,17 @@ def signup():
     email = data.get('email')
     password = data.get('password')
 
+    # Email already exists check
     if users.find_one({'email': email}):
         return jsonify({'error': 'Email already exists'}), 400
 
+    # Password strength check
+    if not is_strong_password(password):
+        return jsonify({
+            'error': 'Password must be at least 8 characters long, include uppercase, lowercase, number, and special character.'
+        }), 400
+
+    # Password is strong → hash & save
     hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     users.insert_one({'name': name, 'email': email, 'password': hashed})
 
