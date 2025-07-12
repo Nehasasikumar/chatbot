@@ -6,6 +6,14 @@ import { ChatInterface } from '@/components/ChatInterface';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 
+interface Message {
+  id: string;
+  type: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  url?: string;
+}
+
 interface Summary {
   id: string;
   title: string;
@@ -13,6 +21,7 @@ interface Summary {
   timestamp?: string;
   url: string;
   summary: string;
+  messages?: Message[];
 }
 
 export const Dashboard = () => {
@@ -42,6 +51,11 @@ export const Dashboard = () => {
   };
 
   const handleSelectSummary = (summary: Summary) => {
+    const stored = localStorage.getItem(summary.id);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      summary.messages = parsed.messages || [];
+    }
     setCurrentSummary(summary);
     if (isMobile) {
       setSidebarOpen(false);
@@ -74,7 +88,7 @@ export const Dashboard = () => {
 
       {/* Sidebar */}
       <div
-        className={`${
+        className={
           isMobile
             ? `fixed left-0 top-0 z-50 h-full transition-transform duration-300 ${
                 sidebarOpen ? 'translate-x-0' : '-translate-x-full'
@@ -82,7 +96,7 @@ export const Dashboard = () => {
             : sidebarOpen
             ? 'block'
             : 'hidden'
-        }`}
+        }
       >
         <Sidebar
           onNewSummary={handleNewSummary}
@@ -130,21 +144,11 @@ export const Dashboard = () => {
 
         {/* Main View */}
         <div className="flex-1 min-h-0 p-6 overflow-auto">
-          {currentSummary ? (
-            <>
-              <h2 className="text-lg font-semibold text-foreground mb-4">
-                {currentSummary.title}
-              </h2>
-              <div className="whitespace-pre-wrap text-muted-foreground">
-                {currentSummary.summary || 'No summary content available.'}
-              </div>
-            </>
-          ) : (
-            <ChatInterface
-              summaryId={currentSummary?.id}
-              onSummaryCreated={handleSummaryCreated}
-            />
-          )}
+          <ChatInterface
+            summaryId={currentSummary?.id}
+            onSummaryCreated={handleSummaryCreated}
+            existingMessages={currentSummary?.messages || []}
+          />
         </div>
       </div>
     </div>

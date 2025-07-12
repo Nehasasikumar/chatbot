@@ -17,9 +17,14 @@ interface Message {
 interface ChatInterfaceProps {
   summaryId?: string;
   onSummaryCreated: (summary: any) => void;
+  existingMessages?: Message[];
 }
 
-export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProps) => {
+export const ChatInterface = ({
+  summaryId,
+  onSummaryCreated,
+  existingMessages = [],
+}: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputUrl, setInputUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -27,39 +32,29 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // ✅ Load messages from localStorage when component mounts or summaryId changes
+  useEffect(() => {
+    if (summaryId) {
+      const stored = localStorage.getItem(summaryId);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.messages) {
+          setMessages(parsed.messages);
+        }
+      } else {
+        setMessages(existingMessages);
+      }
+    } else {
+      setMessages(existingMessages);
+    }
+  }, [summaryId]);
+
+  // ✅ Auto-scroll on message change
   useEffect(() => {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
   }, [messages]);
-
-  useEffect(() => {
-    if (!summaryId) {
-      setMessages([]);
-      return;
-    }
-
-    const stored = localStorage.getItem(summaryId);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      const loadedMessages: Message[] = [
-        {
-          id: 'user-' + summaryId,
-          type: 'user',
-          content: parsed.url,
-          timestamp: new Date(parsed.created_at),
-          url: parsed.url,
-        },
-        {
-          id: 'assistant-' + summaryId,
-          type: 'assistant',
-          content: parsed.summary,
-          timestamp: new Date(parsed.created_at),
-        },
-      ];
-      setMessages(loadedMessages);
-    }
-  }, [summaryId]);
 
   const isValidUrl = (string: string) => {
     try {
@@ -99,7 +94,8 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
       url: inputUrl,
     };
 
-    setMessages([userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInputUrl('');
     setIsLoading(true);
 
@@ -107,7 +103,10 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
       const response = await summarizeArticle(inputUrl);
 
       const summaryText =
-  response.summary || response.abstractive_summary || response.extractive_summary || 'No summary available.';
+        response.summary ||
+        response.abstractive_summary ||
+        response.extractive_summary ||
+        'No summary available.';
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -116,19 +115,19 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
         timestamp: new Date(),
       };
 
-      setMessages([userMessage, assistantMessage]);
-
-      const storageKey = inputUrl;
+      const newMessages = [...updatedMessages, assistantMessage];
+      setMessages(newMessages);
 
       const summaryData = {
-        id: storageKey,
+        id: summaryId || inputUrl,
         title: response.title || 'Article Summary',
         url: inputUrl,
         summary: summaryText,
         created_at: new Date().toISOString(),
+        messages: newMessages,
       };
 
-      localStorage.setItem(storageKey, JSON.stringify(summaryData));
+      localStorage.setItem(summaryData.id, JSON.stringify(summaryData));
       onSummaryCreated(summaryData);
 
       toast({
@@ -141,8 +140,6 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
         title: 'Summary failed',
         description: error.message || 'Failed to generate summary. Please try again.',
       });
-
-      setMessages([]);
     } finally {
       setIsLoading(false);
     }
@@ -150,7 +147,6 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
 
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Chat display */}
       <ScrollArea className="flex-1 p-6" ref={scrollAreaRef}>
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
@@ -199,7 +195,7 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
                         : 'text-muted-foreground'
                     }`}
                   >
-                    {message.timestamp.toLocaleTimeString()}
+                    {new Date(message.timestamp).toLocaleTimeString()}
                   </div>
                 </div>
               </div>
@@ -211,8 +207,14 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
                   <div className="flex items-center space-x-2">
                     <div className="flex space-x-1">
                       <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      <div
+                        className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
+                        style={{ animationDelay: '0.1s' }}
+                      ></div>
+                      <div
+                        className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
+                        style={{ animationDelay: '0.2s' }}
+                      ></div>
                     </div>
                     <span className="text-muted-foreground text-sm">Generating summary...</span>
                   </div>
@@ -223,7 +225,7 @@ export const ChatInterface = ({ summaryId, onSummaryCreated }: ChatInterfaceProp
         )}
       </ScrollArea>
 
-      {/* Input area with full width */}
+      {/* Input area */}
       <div className="border-t border-accent/20 p-6">
         <form onSubmit={handleSubmit} className="w-full px-4">
           <div className="flex gap-2">

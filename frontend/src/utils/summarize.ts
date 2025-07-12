@@ -1,7 +1,7 @@
-import { getToken } from './auth';  // make sure this is the correct path
+import { getToken } from './auth';
 
 export async function summarizeArticle(url: string) {
-  const token = getToken();  // use utility function
+  const token = getToken();
 
   if (!token) throw new Error('User not logged in');
 
@@ -9,7 +9,7 @@ export async function summarizeArticle(url: string) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ url }),
   });
