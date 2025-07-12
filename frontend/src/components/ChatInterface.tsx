@@ -1,3 +1,4 @@
+// ✅ ChatInterface.tsx
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +33,6 @@ export const ChatInterface = ({
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // ✅ Load messages from localStorage when component mounts or summaryId changes
   useEffect(() => {
     if (summaryId) {
       const stored = localStorage.getItem(summaryId);
@@ -49,7 +49,6 @@ export const ChatInterface = ({
     }
   }, [summaryId]);
 
-  // ✅ Auto-scroll on message change
   useEffect(() => {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
