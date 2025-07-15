@@ -116,6 +116,8 @@ def summarize():
 
     data = request.get_json()
     url = data.get('url')
+    chat_id = data.get('chat_id')
+    messages = data.get('messages')
 
     if not url:
         return jsonify({'error': 'URL is required'}), 400
@@ -138,17 +140,27 @@ def summarize():
         traceback.print_exc()
         return jsonify({'error': f'Summarization failed: {str(e)}'}), 500
 
-    history_collection.insert_one({
-        "email": email,
-        "url": url,
-        "title": article_title,
-        "summary": summary_text,
-        "timestamp": datetime.now().isoformat()
-    })
+    if chat_id:
+        history_collection.update_one(
+            {'email': email, 'id': chat_id},
+            {'$set': {'messages': messages, 'timestamp': datetime.now().isoformat(), 'title': article_title}},
+            upsert=True
+        )
+    else:
+        chat_id = str(datetime.now().timestamp())
+        history_collection.insert_one({
+            "id": chat_id,
+            "email": email,
+            "title": article_title,
+            "messages": messages,
+            "timestamp": datetime.now().isoformat()
+        })
+
 
     return jsonify({
         "summary": summary_text,
-        "title": article_title
+        "title": article_title,
+        "chat_id": chat_id
     }), 200
 
 # ----------------- HISTORY -----------------
@@ -158,21 +170,19 @@ def history():
     if error:
         return jsonify({'error': error}), 401
 
-    summaries = list(history_collection.find({"email": email}, {"_id": 0}))
-    return jsonify({"summaries": summaries}), 200
+    chats = list(history_collection.find({"email": email}, {"_id": 0}))
+    return jsonify({"chats": chats}), 200
 
 #from urllib.parse import unquote
 
 # ----------------- DELETE SUMMARY -----------------
-@app.route('/summary/<path:url>', methods=['DELETE'])
-def delete_summary(url):
+@app.route('/summary/<id>', methods=['DELETE'])
+def delete_summary(id):
     email, error = get_email_from_token(request.headers.get('Authorization'))
     if error:
         return jsonify({'error': error}), 401
 
-    decoded_url = unquote(url)
-    print(f"Deleting summary for: {decoded_url} Email: {email}")
-    result = history_collection.delete_one({'email': email, 'url': decoded_url})
+    result = history_collection.delete_one({'email': email, 'id': id})
 
     if result.deleted_count == 0:
         return jsonify({'error': 'Summary not found'}), 404
@@ -180,19 +190,17 @@ def delete_summary(url):
     return jsonify({'message': 'Summary deleted'}), 200
 
 # ----------------- RENAME SUMMARY -----------------
-@app.route('/summary/<path:url>', methods=['PUT'])
-def rename_summary(url):
+@app.route('/summary/<id>', methods=['PUT'])
+def rename_summary(id):
     email, error = get_email_from_token(request.headers.get('Authorization'))
     if error:
         return jsonify({'error': error}), 401
 
     data = request.get_json()
     new_title = data.get('title')
-    decoded_url = unquote(url)
 
-    print(f"Renaming summary for: {decoded_url} Email: {email} New title: {new_title}")
     result = history_collection.update_one(
-        {'email': email, 'url': decoded_url},
+        {'email': email, 'id': id},
         {'$set': {'title': new_title}}
     )
 

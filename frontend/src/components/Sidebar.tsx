@@ -16,36 +16,24 @@ interface Summary {
 }
 
 interface SidebarProps {
+  summaries: Summary[];
   onNewSummary: () => void;
   onSelectSummary: (summary: Summary) => void;
   currentSummaryId?: string;
+  setSummaries: (summaries: Summary[]) => void;
 }
 
 export const Sidebar = ({
+  summaries,
   onNewSummary,
   onSelectSummary,
   currentSummaryId,
+  setSummaries,
 }: SidebarProps) => {
-  const [summaries, setSummaries] = useState<Summary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editedTitle, setEditedTitle] = useState<string>('');
   const { toast } = useToast();
-
-  useEffect(() => {
-    fetchHistory();
-  }, []);
-
-  const fetchHistory = async () => {
-    try {
-      const response = await getHistory();
-      setSummaries(response.summaries || []);
-    } catch (error) {
-      console.error('❌ Failed to fetch history:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const formatDate = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -56,16 +44,15 @@ export const Sidebar = ({
     return title.length > maxLength ? title.substring(0, maxLength) + '...' : title;
   };
 
-  const handleRename = async (url: string) => {
+  const handleRename = async (id: string) => {
     if (!editedTitle.trim()) return;
     try {
-      await renameSummary(url, editedTitle);
+      await renameSummary(id, editedTitle);
       toast({ title: 'Title renamed successfully' });
-      setSummaries((prev) =>
-        prev.map((s) =>
-          s.url === url ? { ...s, title: editedTitle } : s
-        )
+      const newSummaries = summaries.map((s) =>
+        s.id === id ? { ...s, title: editedTitle } : s
       );
+      setSummaries(newSummaries);
       setEditId(null);
     } catch (err) {
       toast({
@@ -76,14 +63,15 @@ export const Sidebar = ({
     }
   };
 
-  const handleDelete = async (url: string) => {
+  const handleDelete = async (id: string) => {
     const confirmed = confirm('Are you sure you want to delete this summary?');
     if (!confirmed) return;
 
     try {
-      await deleteSummary(url);
+      await deleteSummary(id);
       toast({ title: 'Deleted successfully' });
-      setSummaries((prev) => prev.filter((s) => s.url !== url));
+      const newSummaries = summaries.filter((s) => s.id !== id);
+      setSummaries(newSummaries);
     } catch (err) {
       toast({
         variant: 'destructive',
@@ -157,7 +145,7 @@ export const Sidebar = ({
                       <div className="flex gap-2 ml-2 mt-1">
                         <Check
                           className="w-4 h-4 text-green-600 cursor-pointer"
-                          onClick={() => handleRename(summary.url)}
+                          onClick={() => handleRename(summary.id)}
                         />
                         <X
                           className="w-4 h-4 text-gray-500 cursor-pointer"
@@ -175,7 +163,7 @@ export const Sidebar = ({
                         />
                         <Trash2
                           className="w-4 h-4 text-destructive cursor-pointer"
-                          onClick={() => handleDelete(summary.url)}
+                          onClick={() => handleDelete(summary.id)}
                         />
                       </div>
                     )}

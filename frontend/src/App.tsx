@@ -9,7 +9,6 @@ import { Dashboard } from "./pages/Dashboard";
 import { isAuthenticated } from "./utils/auth";
 import NotFound from "./pages/NotFound";
 import React from "react";
-import Summarizer from "./components/summarize";
 
 const queryClient = new QueryClient();
 
@@ -47,7 +46,6 @@ function App() {
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
-                <Summarizer />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

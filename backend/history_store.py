@@ -9,7 +9,7 @@ def get_user_history_file(user_email):
     safe_email = user_email.replace("@", "_at_").replace(".", "_dot_")
     return os.path.join(HISTORY_DIR, f"{safe_email}_history.json")
 
-def save_history(user_email, url, title, summary):
+def save_history(user_email, chat_id, messages, title):
     if not os.path.exists(HISTORY_DIR):
         os.makedirs(HISTORY_DIR)
 
@@ -18,15 +18,27 @@ def save_history(user_email, url, title, summary):
     history = []
     if os.path.exists(user_history_file):
         with open(user_history_file, "r") as f:
-            history = json.load(f)
+            try:
+                history = json.load(f)
+            except json.JSONDecodeError:
+                history = []
 
-    history.append({
-        "id": url,
-        "timestamp": datetime.now().isoformat(),
-        "url": url,
-        "title": title,
-        "summary": summary
-    })
+    chat_exists = False
+    for chat in history:
+        if chat.get("id") == chat_id:
+            chat["messages"] = messages
+            chat["timestamp"] = datetime.now().isoformat()
+            chat["title"] = title
+            chat_exists = True
+            break
+
+    if not chat_exists:
+        history.append({
+            "id": chat_id,
+            "timestamp": datetime.now().isoformat(),
+            "title": title,
+            "messages": messages
+        })
 
     with open(user_history_file, "w") as f:
         json.dump(history, f, indent=4)

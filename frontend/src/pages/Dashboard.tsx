@@ -24,9 +24,13 @@ interface Summary {
   messages?: Message[];
 }
 
+import { getHistory } from '@/config/api';
+
 export const Dashboard = () => {
+  const [summaries, setSummaries] = useState<Summary[]>([]);
   const [currentSummary, setCurrentSummary] = useState<Summary | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [chatKey, setChatKey] = useState(Date.now());
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -41,10 +45,21 @@ export const Dashboard = () => {
     if (isMobile) {
       setSidebarOpen(false);
     }
+    fetchHistory();
   }, [navigate, isMobile]);
+
+  const fetchHistory = async () => {
+    try {
+      const response = await getHistory();
+      setSummaries(response.chats || []);
+    } catch (error) {
+      console.error('❌ Failed to fetch history:', error);
+    }
+  };
 
   const handleNewSummary = () => {
     setCurrentSummary(null);
+    setChatKey(Date.now());
     if (isMobile) {
       setSidebarOpen(false);
     }
@@ -64,9 +79,13 @@ export const Dashboard = () => {
 
   const handleSummaryCreated = (summary: Summary) => {
     setCurrentSummary(summary);
-    toast({
-      title: 'Summary saved!',
-      description: 'Your summary has been saved to your history.',
+    setSummaries((prev) => {
+      const existing = prev.find((s) => s.id === summary.id);
+      if (existing) {
+        return prev.map((s) => (s.id === summary.id ? summary : s));
+      } else {
+        return [summary, ...prev];
+      }
     });
   };
 
@@ -99,9 +118,11 @@ export const Dashboard = () => {
         }
       >
         <Sidebar
+          summaries={summaries}
           onNewSummary={handleNewSummary}
           onSelectSummary={handleSelectSummary}
           currentSummaryId={currentSummary?.id}
+          setSummaries={setSummaries}
         />
       </div>
 
@@ -145,6 +166,7 @@ export const Dashboard = () => {
         {/* Main View */}
         <div className="flex-1 min-h-0 p-6 overflow-auto">
           <ChatInterface
+            key={chatKey}
             summaryId={currentSummary?.id}
             onSummaryCreated={handleSummaryCreated}
             existingMessages={currentSummary?.messages || []}

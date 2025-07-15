@@ -41,25 +41,24 @@ export const signupUser = async (
 // ----------------------
 export const getHistory = async () => {
   const response = await api.get('/history');
-  const summaries = response.data.summaries || [];
+  const chats = response.data.chats || [];
 
-  const mapped = summaries.map((item: any, index: number) => ({
-    id: `${index}`, // fallback ID
+  const mapped = chats.map((item: any) => ({
+    id: item.id,
     title: item.title,
-    url: item.url,
-    summary: item.summary,
+    messages: item.messages,
     timestamp: item.timestamp || item.created_at,
   }));
 
-  return { summaries: mapped };
+  return { chats: mapped };
 };
 
 // ----------------------
 // Summarize article
 // ----------------------
-export const summarizeArticle = async (url: string) => {
+export const summarizeArticle = async (url: string, chat_id: string | undefined, messages: any[]) => {
   try {
-    const response = await api.post('/summarize', { url });
+    const response = await api.post('/summarize', { url, chat_id, messages });
     return response.data;
   } catch (error: any) {
     throw new Error(
@@ -69,11 +68,11 @@ export const summarizeArticle = async (url: string) => {
 };
 
 // ----------------------
-// Delete a summary by URL
+// Delete a summary by ID
 // ----------------------
-export const deleteSummary = async (url: string) => {
+export const deleteSummary = async (id: string) => {
   try {
-    const response = await api.delete(`/summary/${encodeURIComponent(url)}`);
+    const response = await api.delete(`/summary/${id}`);
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.error || 'Failed to delete summary.');
@@ -81,11 +80,11 @@ export const deleteSummary = async (url: string) => {
 };
 
 // ----------------------
-// Rename a summary by URL
+// Rename a summary by ID
 // ----------------------
-export const renameSummary = async (url: string, title: string) => {
+export const renameSummary = async (id: string, title: string) => {
   try {
-    const response = await api.put(`/summary/${encodeURIComponent(url)}`, { title });
+    const response = await api.put(`/summary/${id}`, { title });
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.error || 'Failed to rename summary.');

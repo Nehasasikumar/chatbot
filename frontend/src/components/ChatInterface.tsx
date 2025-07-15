@@ -29,11 +29,13 @@ export const ChatInterface = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputUrl, setInputUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [currentChatId, setCurrentChatId] = useState<string | undefined>(summaryId);
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    setCurrentChatId(summaryId);
     if (summaryId) {
       const stored = localStorage.getItem(summaryId);
       if (stored) {
@@ -99,7 +101,7 @@ export const ChatInterface = ({
     setIsLoading(true);
 
     try {
-      const response = await summarizeArticle(inputUrl);
+      const response = await summarizeArticle(inputUrl, currentChatId, updatedMessages);
 
       const summaryText =
         response.summary ||
@@ -117,16 +119,17 @@ export const ChatInterface = ({
       const newMessages = [...updatedMessages, assistantMessage];
       setMessages(newMessages);
 
+      const newChatId = response.chat_id;
+      if (!currentChatId) {
+        setCurrentChatId(newChatId);
+      }
+
       const summaryData = {
-        id: summaryId || inputUrl,
+        id: newChatId,
         title: response.title || 'Article Summary',
-        url: inputUrl,
-        summary: summaryText,
-        created_at: new Date().toISOString(),
         messages: newMessages,
       };
 
-      localStorage.setItem(summaryData.id, JSON.stringify(summaryData));
       onSummaryCreated(summaryData);
 
       toast({
