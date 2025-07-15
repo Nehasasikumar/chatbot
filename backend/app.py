@@ -11,9 +11,9 @@ import traceback
 import re
 from urllib.parse import unquote
 
-# Load spaCy and BART models
+# Load spaCy and T5 models
 nlp = spacy.load("en_core_web_sm")
-summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+summarizer = pipeline("summarization", model="t5-large")
 
 # JWT Secret
 SECRET_KEY = "your_super_secret_key"
@@ -132,8 +132,8 @@ def summarize():
         if not article_text.strip():
             raise ValueError("Article content is empty")
 
-        extracted_text = extractive_summary_spacy(article_text, sentence_count=7)
-        output = summarizer(extracted_text, max_length=200, min_length=60, do_sample=False)
+        # Using the full article text for better summaries
+        output = summarizer(article_text, max_length=1024, min_length=150, do_sample=False)
         summary_text = output[0]['summary_text']
 
     except Exception as e:

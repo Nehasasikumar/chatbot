@@ -4,36 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Sidebar } from '@/components/Sidebar';
 import { ChatInterface } from '@/components/ChatInterface';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useToast } from '@/hooks/use-toast';
-
-interface Message {
-  id: string;
-  type: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  url?: string;
-}
-
-interface Summary {
-  id: string;
-  title: string;
-  created_at?: string;
-  timestamp?: string;
-  url: string;
-  summary: string;
-  messages?: Message[];
-}
-
 import { getHistory } from '@/config/api';
+import { Summary } from '@/state';
 
 export const Dashboard = () => {
   const [summaries, setSummaries] = useState<Summary[]>([]);
   const [currentSummary, setCurrentSummary] = useState<Summary | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [chatKey, setChatKey] = useState(Date.now());
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -41,12 +20,12 @@ export const Dashboard = () => {
       navigate('/login');
       return;
     }
-
-    if (isMobile) {
-      setSidebarOpen(false);
-    }
     fetchHistory();
-  }, [navigate, isMobile]);
+    const storedSummary = localStorage.getItem('currentSummary');
+    if (storedSummary) {
+      setCurrentSummary(JSON.parse(storedSummary));
+    }
+  }, [navigate]);
 
   const fetchHistory = async () => {
     try {
@@ -59,19 +38,15 @@ export const Dashboard = () => {
 
   const handleNewSummary = () => {
     setCurrentSummary(null);
-    setChatKey(Date.now());
+    localStorage.removeItem('currentSummary');
     if (isMobile) {
       setSidebarOpen(false);
     }
   };
 
   const handleSelectSummary = (summary: Summary) => {
-    const stored = localStorage.getItem(summary.id);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      summary.messages = parsed.messages || [];
-    }
     setCurrentSummary(summary);
+    localStorage.setItem('currentSummary', JSON.stringify(summary));
     if (isMobile) {
       setSidebarOpen(false);
     }
@@ -79,33 +54,25 @@ export const Dashboard = () => {
 
   const handleSummaryCreated = (summary: Summary) => {
     setCurrentSummary(summary);
-    setSummaries((prev) => {
-      const existing = prev.find((s) => s.id === summary.id);
-      if (existing) {
-        return prev.map((s) => (s.id === summary.id ? summary : s));
-      } else {
-        return [summary, ...prev];
-      }
-    });
+    setSummaries((prev) => [summary, ...prev.filter((s) => s.id !== summary.id)]);
+    localStorage.setItem('currentSummary', JSON.stringify(summary));
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('currentSummary');
     navigate('/login');
   };
 
   return (
     <div className="h-screen bg-background flex">
-      {/* Mobile overlay */}
       {isMobile && sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40"
           onClick={() => setSidebarOpen(false)}
         />
       )}
-
-      {/* Sidebar */}
       <div
         className={
           isMobile
@@ -125,10 +92,7 @@ export const Dashboard = () => {
           setSummaries={setSummaries}
         />
       </div>
-
-      {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
         <header className="bg-card border-b border-accent/20 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             {(isMobile || !sidebarOpen) && (
@@ -145,7 +109,6 @@ export const Dashboard = () => {
               {currentSummary ? currentSummary.title : 'Article Summarizer'}
             </h1>
           </div>
-
           <div className="flex items-center space-x-3">
             {!isMobile && sidebarOpen && (
               <Button
@@ -162,14 +125,11 @@ export const Dashboard = () => {
             </Button>
           </div>
         </header>
-
-        {/* Main View */}
         <div className="flex-1 min-h-0 p-6 overflow-auto">
           <ChatInterface
-            key={chatKey}
-            summaryId={currentSummary?.id}
+            key={currentSummary?.id || 'new'}
+            selectedSummary={currentSummary}
             onSummaryCreated={handleSummaryCreated}
-            existingMessages={currentSummary?.messages || []}
           />
         </div>
       </div>
